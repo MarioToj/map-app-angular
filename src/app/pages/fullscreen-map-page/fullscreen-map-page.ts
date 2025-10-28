@@ -1,3 +1,4 @@
+import { DecimalPipe, JsonPipe } from '@angular/common';
 import {
   AfterViewInit,
   Component,
@@ -11,7 +12,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 @Component({
   selector: 'app-fullscreen-map-page',
-  imports: [],
+  imports: [DecimalPipe, JsonPipe],
   templateUrl: './fullscreen-map-page.html',
   styles: [
     `
@@ -41,6 +42,11 @@ export class FullscreenMapPage implements AfterViewInit {
 
   map = signal<maplibregl.Map | null>(null);
 
+  coordinates = signal({
+    lng: -74.5,
+    lat: 40,
+  });
+
   mapEffect = effect(() => {
     if (!this.map()) return;
 
@@ -53,6 +59,8 @@ export class FullscreenMapPage implements AfterViewInit {
 
     const element = this.divElement()!.nativeElement;
     console.log(element);
+
+    const { lat, lng } = this.coordinates();
 
     const map = new maplibregl.Map({
       container: element,
@@ -74,9 +82,27 @@ export class FullscreenMapPage implements AfterViewInit {
           },
         ],
       },
-      center: [-74.5, 40],
+      center: [lng, lat],
       zoom: this.zoom(),
     });
+
+    this.mapListeners(map);
+  }
+
+  mapListeners(map: maplibregl.Map) {
+    map.on('zoomend', (zoom) => {
+      const newZoom = zoom.target.getZoom();
+      this.zoom.set(newZoom);
+    });
+
+    map.on('moveend', (event) => {
+      const center = event.target.getCenter();
+      this.coordinates.set(center);
+    });
+
+    map.addControl(new maplibregl.FullscreenControl());
+    map.addControl(new maplibregl.NavigationControl());
+    map.addControl(new maplibregl.ScaleControl());
 
     this.map.set(map);
   }
